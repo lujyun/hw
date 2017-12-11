@@ -52,8 +52,9 @@
 
 	
 <script>
-var camera, scene, renderer;
+var camera, camera2, scene, renderer;
 var controls;
+var cameraHUD, sceneHUD;
 var pos = new THREE.Vector3();
 var clock;
 var keyboard = new KeyboardState();
@@ -65,22 +66,53 @@ var theObject =  new THREE.Object3D();
     return Math.min(Math.max(val,min),max);
     
   }})();
+  
 init();
 animate();
 
+function initHUD() {
+
+  sceneHUD = new THREE.Scene();
+  cameraHUD = new THREE.OrthographicCamera(-10.5, 10.5, 10.5, -10.5, -10, 10);
+  cameraHUD.position.z = 5;
+  sceneHUD.add(cameraHUD);
+
+  var lineGeometry = new THREE.Geometry();
+  lineGeometry.vertices.push(new THREE.Vector3(-10, -10, 0),
+    new THREE.Vector3(10, -10, 0),
+    new THREE.Vector3(10, 10, 0),
+    new THREE.Vector3(-10, 10, 0),
+    new THREE.Vector3(-10, -10, 0));
+  var line = new THREE.Line(lineGeometry,
+    new THREE.LineBasicMaterial({
+      color: 0xffffff
+    }));
+  sceneHUD.add(line);
+ /* var title = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({
+    color: 0xff1234,
+    depthTest: false  // important
+  }));
+  sceneHUD.add(title);*/
+
+}
 
 function init() {
+	initHUD()
   clock = new THREE.Clock();
   container = document.createElement('div');
   document.body.appendChild(container);
 
   camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
-  camera.position.z = 250;
-  camera.position.y = 100;
+  camera.position.x = -10;  // important
+  camera.position.y = 50;
+	camera.position.z =-5;
+  camera2 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 20000);
+  camera2.position.x = 0;  // important
+  camera2.position.y = 150;
   // scene
 
   scene = new THREE.Scene();
-
+scene.add (camera2);
 	gridxz = new THREE.GridHelper (200, 20,'red','white');
 	scene.add (gridxz);
 	
@@ -116,7 +148,7 @@ function init() {
     objLoader.load('1967-shelby-ford-mustang.obj', function(object) {
 
 			
-			var theObject =  unitize (object, 50);
+			var theObject =  unitize (object, 30);
 			car = theObject;	
 			scene.add (car);
 			
@@ -145,11 +177,10 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   container.appendChild(renderer.domElement);
 	renderer.setClearColor (0x888888);
-
-	controls = new THREE.OrbitControls(camera, renderer.domElement);
-	  controls.enableKeys = false;
-	  document.body.appendChild(renderer.domElement);
-	camera.position.z = 200;
+  renderer.autoClear = false;
+	controls = new THREE.OrbitControls(camera2, renderer.domElement);
+	controls.enableKeys = false;
+	document.body.appendChild(renderer.domElement);
 
   window.addEventListener('resize', onWindowResize, false);
 
@@ -232,6 +263,15 @@ function animate() {
 	// car update
 	car.position.copy(pos);
 	car.rotation.y = angle;
+
+	var relativeCameraOffset = new THREE.Vector3 (-60,50,0);	
+	var cameraOffset = relativeCameraOffset.applyMatrix4( car.matrixWorld );
+
+		camera.position.x = cameraOffset.x;
+		camera.position.y = cameraOffset.y;
+		camera.position.z = cameraOffset.z;
+		camera.lookAt( car.position );
+	camera.lookAt(car.position)
 	requestAnimationFrame(animate);
 	render();
 
@@ -239,7 +279,28 @@ function animate() {
 
 function render() {
 
-  renderer.render(scene, camera);
+
+
+	var WW = window.innerWidth;
+	var HH = window.innerHeight;
+
+	renderer.setScissorTest(true);
+    renderer.setViewport(0, 0, WW / 2, HH);
+    camera.aspect = WW / 2 / HH;
+    camera.updateProjectionMatrix();
+    renderer.setScissor(0, 0, WW / 2, HH);
+    renderer.clear();
+    renderer.render(scene, camera);
+    renderer.render(sceneHUD, cameraHUD);
+
+    renderer.setViewport(WW / 2, 0, WW / 2, HH);
+    renderer.setScissor(WW / 2, 0, WW / 2, HH);
+    renderer.clear();
+    renderer.render(scene, camera2);
+    renderer.render(sceneHUD, cameraHUD);
+
+    
+	renderer.setScissorTest(false);
 
 }
 
