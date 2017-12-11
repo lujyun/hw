@@ -294,6 +294,8 @@ function render() {
     renderer.render(sceneHUD, cameraHUD);
 
     renderer.setViewport(WW / 2, 0, WW / 2, HH);
+	camera2.aspect = WW / 2 / HH;
+    camera2.updateProjectionMatrix();
     renderer.setScissor(WW / 2, 0, WW / 2, HH);
     renderer.clear();
     renderer.render(scene, camera2);
